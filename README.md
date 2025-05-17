@@ -1,4 +1,4 @@
-# Nome do Seu Projeto Aqui
+# Gaming Backlog - Imersão IA Alura
 
 E aí, pessoal! 🚀 Esse é o projeto que desenvolvi na Imersão Alura em IA com o Google Gemini. O negócio ficou show e resolvi compartilhar com a comunidade!
 
