@@ -1,0 +1,13 @@
+# src/utils.py
+def formatar_data(data_string):
+    try:
+        return datetime.strptime(data_string, '%Y-%m-%d').strftime('%d/%m/%Y')
+    except ValueError:
+        return None
+
+def validar_nota(nota):
+    try:
+        nota_int = int(nota)
+        return 1 <= nota_int <= 5 or not nota
+    except ValueError:
+        return False

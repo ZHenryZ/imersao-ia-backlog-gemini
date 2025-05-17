@@ -1,0 +1,16 @@
+# src/config.py
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Credenciais do Google Sheets
+GOOGLE_SHEETS_CREDENTIALS_FILE = os.getenv("GOOGLE_SHEETS_CREDENTIALS_FILE")
+GOOGLE_SHEETS_ID = os.getenv("GOOGLE_SHEETS_ID")
+
+# Credenciais da API do IGDB (via Twitch)
+IGDB_CLIENT_ID = os.getenv("IGDB_CLIENT_ID")
+IGDB_TOKEN = os.getenv("IGDB_TOKEN")
+
+# Se você estiver usando Client Secret para obter o token
+# IGDB_CLIENT_SECRET = os.getenv("IGDB_CLIENT_SECRET")

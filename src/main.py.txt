@@ -1,0 +1,132 @@
+import requests
+import gspread
+from datetime import datetime
+from google.oauth2.service_account import Credentials
+from config import IGDB_CLIENT_ID, IGDB_TOKEN, GOOGLE_SHEETS_CREDENTIALS_FILE, GOOGLE_SHEETS_ID
+
+# Autenticação no Google Sheets
+credenciais = Credentials.from_service_account_file(GOOGLE_SHEETS_CREDENTIALS_FILE,
+    scopes=['https://www.googleapis.com/auth/spreadsheets'])
+gc = gspread.authorize(credenciais)
+planilha = gc.open_by_key(GOOGLE_SHEETS_ID)
+aba = planilha.sheet1  # Ou a aba que você estiver usando
+
+# Função para buscar jogos na API do IGDB (usando a busca refinada do Gemini - A SER IMPLEMENTADA)
+def buscar_jogos_igdb(nome_do_jogo):
+    headers = {
+        'Client-ID': IGDB_CLIENT_ID,
+        'Authorization': f'Bearer {IGDB_TOKEN}',
+    }
+    data = f'search "{nome_do_jogo}"; fields name, cover.url, first_release_date, platforms.abbreviation, involved_companies.company.name, involved_companies.developer, involved_companies.publisher; limit 10;'
+    response = requests.post('https://api.igdb.com/v4/games', headers=headers, data=data)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Erro na requisição IGDB: {response.status_code} - {response.text}")
+        return None
+
+# Função (SIMULADA) para refinar a busca com Gemini (VOCÊ PODE ADICIONAR A INTEGRAÇÃO REAL AQUI)
+def refinar_busca_gemini(resultados_igdb, nome_do_jogo):
+    if resultados_igdb:
+        print(f"\nResultados da busca para '{nome_do_jogo}':")
+        for i, jogo in enumerate(resultados_igdb):
+            print(f"{i+1}. {jogo.get('name')}")
+        return resultados_igdb
+    else:
+        print("Nenhum resultado inicial encontrado.")
+        return None
+
+# Função para obter detalhes de um jogo específico do IGDB
+def obter_detalhes_jogo(game_id):
+    headers = {
+        'Client-ID': IGDB_CLIENT_ID,
+        'Authorization': f'Bearer {IGDB_TOKEN}',
+    }
+    data = f'fields name, cover.url, first_release_date, platforms.abbreviation, involved_companies.company.name, involved_companies.developer, involved_companies.publisher, genres.name, summary; where id = {game_id};'
+    response = requests.post(f'https://api.igdb.com/v4/games', headers=headers, data=data)
+    if response.status_code == 200:
+        return response.json()[0] if response.json() else None
+    else:
+        print(f"Erro ao obter detalhes do jogo {game_id}: {response.status_code} - {response.text}")
+        return None
+
+def adicionar_jogo_na_planilha(info_jogo, jogando_atualmente, plataforma_escolhida, comentarios, nota, data_inicio, data_finalizado, status, tempo_estimado_usuario=None, tempo_hltb=None):
+    if info_jogo:
+        nome_do_jogo = info_jogo.get('name')
+
+        coluna_nome_do_jogo = aba.col_values(5) # Coluna 'Nome do Game' (índice 4)
+
+        next_row = 1
+        for i, nome in enumerate(coluna_nome_do_jogo):
+            if i > 0 and not nome:
+                next_row = i + 1
+                break
+        else:
+            next_row = len(coluna_nome_do_jogo) + 1
+
+        # Escrever os valores em cada célula individualmente, pulando a coluna da imagem (índice 3)
+        aba.update_cell(next_row, 1, next_row - 1 if next_row > 1 else 1)  # #
+        aba.update_cell(next_row, 2, jogando_atualmente)  # #Jogando Atualmente
+        aba.update_cell(next_row, 3, f"https:{info_jogo.get('cover', {}).get('url', '').replace('t_thumb', 't_cover_big')}" if info_jogo.get('cover') else "")  # Capa do Game (URL)
+        aba.update_cell(next_row, 5, nome_do_jogo)  # Nome do Game (agora na coluna 5)
+        aba.update_cell(next_row, 6, next((comp.get('company', {}).get('name') for comp in info_jogo.get('involved_companies', []) if comp.get('developer')), None))  # Desenvolvedora
+        aba.update_cell(next_row, 7, next((comp.get('company', {}).get('name') for comp in info_jogo.get('involved_companies', []) if comp.get('publisher')), None))  # Publisher
+        aba.update_cell(next_row, 8, datetime.fromtimestamp(info_jogo.get('first_release_date')).strftime('%Y-%m-%d') if info_jogo.get('first_release_date') else "")  # Data de Lançamento
+        aba.update_cell(next_row, 9, ", ".join([plat.get('abbreviation') for plat in info_jogo.get('platforms', []) if plat.get('abbreviation')]))  # Plataformas Disponíveis
+        aba.update_cell(next_row, 10, plataforma_escolhida)  # Plataforma Escolhida
+        aba.update_cell(next_row, 11, comentarios)  # Comentários
+        aba.update_cell(next_row, 12, nota)  # Nota (formato da lista suspensa)
+        aba.update_cell(next_row, 13, tempo_estimado_usuario if tempo_estimado_usuario else (tempo_hltb if tempo_hltb else ""))  # Tempo de Jogo
+        aba.update_cell(next_row, 14, data_inicio)  # Iniciado
+        aba.update_cell(next_row, 15, data_finalizado)  # Finalizado
+        aba.update_cell(next_row, 16, status)  # Status
+
+        print(f"Jogo '{nome_do_jogo}' adicionado à planilha na linha {next_row}.")
+    else:
+        print("Nenhuma informação do jogo para adicionar.")
+
+if __name__ == "__main__":
+    while True:
+        print("\n--- Gerenciador de Backlog de Jogos ---")
+        nome_pesquisa = input("Digite o nome do jogo que você quer adicionar (ou 'sair' para finalizar): ")
+        if nome_pesquisa.lower() == 'sair':
+            break
+
+        resultados = buscar_jogos_igdb(nome_pesquisa)
+        if resultados:
+            print("\nResultados da Busca:")
+            for i, jogo in enumerate(resultados):
+                print(f"{i + 1}. {jogo.get('name')}")
+
+            try:
+                escolha = int(input("Escolha o número do jogo para ver os detalhes: "))
+                if 1 <= escolha <= len(resultados):
+                    jogo_escolhido = resultados[escolha - 1]
+                    detalhes_jogo = obter_detalhes_jogo(jogo_escolhido.get('id'))
+                    if detalhes_jogo:
+                        print("\nDetalhes do Jogo:")
+                        print(f"Nome: {detalhes_jogo.get('name')}")
+                        print(f"Desenvolvedora: {next((comp.get('company', {}).get('name') for comp in detalhes_jogo.get('involved_companies', []) if comp.get('developer')), 'N/A')}")
+                        print(f"Publisher: {next((comp.get('company', {}).get('name') for comp in detalhes_jogo.get('involved_companies', []) if comp.get('publisher')), 'N/A')}")
+                        print(f"Plataformas: {', '.join([p.get('abbreviation') for p in detalhes_jogo.get('platforms', [])] if detalhes_jogo.get('platforms') else 'N/A')}")
+
+                        jogando_agora = input("Está jogando atualmente? (True/False): ").strip().lower() == 'true'
+                        plataforma = input("Plataforma escolhida: ").strip()
+                        comentario = input("Comentários: ").strip()
+                        nota = input("Nota (1 a 5 ou deixe vazio): ").strip()
+                        data_inicio = input("Data de Início (AAAA-MM-DD ou deixe vazio): ").strip()
+                        data_finalizado = input("Data de Finalização (AAAA-MM-DD ou deixe vazio): ").strip()
+                        status_jogo = input("Status (100%, Zerado, Jogando, Pausado, Abandonei): ").strip()
+                        tempo_estimado = input("Tempo Estimado de Jogo (opcional): ").strip()
+
+                        adicionar_jogo_na_planilha(detalhes_jogo, jogando_agora, plataforma, comentario, nota, data_inicio, data_finalizado, status_jogo, tempo_estimado)
+                    else:
+                        print("Não foi possível obter informações detalhadas para o jogo selecionado.")
+                else:
+                    print("Escolha inválida.")
+            except ValueError:
+                print("Por favor, digite um número.")
+        else:
+            print("Nenhum jogo encontrado com esse nome.")
+
+    print("\nEncerrando o gerenciador de backlog.")
