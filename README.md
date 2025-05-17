@@ -4,9 +4,7 @@ E aí, pessoal! 🚀 Esse é o projeto que desenvolvi na Imersão Alura em IA co
 
 ## 📹 Vídeo de Demonstração
 
-<div align="center">
-<iframe width="560" height="315" src="https://www.youtube.com/embed/67" frameborder="0" allowfullscreen></iframe>
-</div>
+[Clique aqui para assistir à demonstração do projeto no YouTube](https://www.youtube.com/watch?v=scz12jzNjIQ&ab_channel=HenrySantanaSouza)
 
 ## 💡 O Projeto
 
