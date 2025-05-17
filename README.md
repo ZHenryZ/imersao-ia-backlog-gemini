@@ -5,9 +5,8 @@ E aí, pessoal! 🚀 Esse é o projeto que desenvolvi na Imersão Alura em IA co
 ## 📹 Vídeo de Demonstração
 
 <div align="center">
-<iframe width="560" height="315" src="https://youtu.be/scz12jzNjIQ" frameborder="0" allowfullscreen></iframe>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/67" frameborder="0" allowfullscreen></iframe>
 </div>
-
 
 ## 💡 O Projeto
 
